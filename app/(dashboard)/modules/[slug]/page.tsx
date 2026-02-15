@@ -3,6 +3,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ModuleDetailClient from './ModuleDetailClient'
 
+// Força renderização dinâmica para sempre buscar dados atualizados
+export const dynamic = 'force-dynamic'
+export const revalidate = 0 // Desabilita cache
+
 interface Material {
   id: string
   title: string
