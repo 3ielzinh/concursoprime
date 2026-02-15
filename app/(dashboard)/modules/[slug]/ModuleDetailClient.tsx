@@ -67,54 +67,54 @@ export default function ModuleDetailClient({ module, materials }: Props) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {materials.map((material) => (
             <div 
               key={material.id}
-              className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-5 hover:border-[#D4AF37]/50 transition group"
+              className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 hover:border-[#D4AF37]/50 transition group flex flex-col"
             >
-              <div className="flex items-start gap-4">
-                <div className="text-4xl flex-shrink-0">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="text-3xl flex-shrink-0">
                   {getFileIcon(material.type)}
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-semibold mb-2 group-hover:text-[#D4AF37] transition">
+                  <h3 className="text-white font-semibold text-sm mb-1 group-hover:text-[#D4AF37] transition line-clamp-2">
                     {material.title}
                   </h3>
                   
-                  {material.description && (
-                    <p className="text-gray-400 text-sm mb-3 line-clamp-2">
-                      {material.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-4">
-                    {material.file_size && (
-                      <span className="flex items-center gap-1">
-                        <span>📦</span>
-                        {material.file_size}
-                      </span>
-                    )}
-                    {material.pages && (
-                      <span className="flex items-center gap-1">
-                        <span>📄</span>
-                        {material.pages} páginas
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1 capitalize">
-                      <span>🏷️</span>
-                      {material.type}
-                    </span>
-                  </div>
-                  
-                  <button
-                    onClick={() => setSelectedMaterial(material)}
-                    className="w-full sm:w-auto px-4 py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition text-sm"
-                  >
-                    Abrir Material
-                  </button>
                 </div>
+              </div>
+              
+              <div className="flex flex-col gap-2 text-xs text-gray-500 mb-3">
+                {material.file_size && (
+                  <span className="flex items-center gap-1">
+                    <span>📦</span>
+                    {material.file_size}
+                  </span>
+                )}
+                {material.pages && (
+                  <span className="flex items-center gap-1">
+                    <span>📄</span>
+                    {material.pages} páginas
+                  </span>
+                )}
+              </div>
+              
+              <div className="mt-auto flex flex-col gap-2">
+                <button
+                  onClick={() => setSelectedMaterial(material)}
+                  className="w-full px-3 py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition text-xs"
+                >
+                  Visualizar
+                </button>
+                <a
+                  href={material.file_url}
+                  download
+                  className="w-full px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg transition text-xs text-center"
+                >
+                  ⬇️ Baixar
+                </a>
               </div>
             </div>
           ))}
@@ -165,8 +165,6 @@ export default function ModuleDetailClient({ module, materials }: Props) {
                 <a
                   href={selectedMaterial.file_url}
                   download
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="px-6 py-3 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition inline-flex items-center gap-2"
                 >
                   <span>⬇️</span>
@@ -187,8 +185,6 @@ export default function ModuleDetailClient({ module, materials }: Props) {
               <a
                 href={selectedMaterial.file_url}
                 download
-                target="_blank"
-                rel="noopener noreferrer"
                 className="px-4 py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition inline-flex items-center gap-2"
               >
                 <span>⬇️</span>

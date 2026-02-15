@@ -22,9 +22,10 @@ interface Material {
 export default async function ModuleDetailPage({
   params,
 }: {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }) {
   const supabase = await createClient()
+  const { slug } = await params
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -35,8 +36,6 @@ export default async function ModuleDetailPage({
     .select('*')
     .eq('id', user.id)
     .single()
-
-  const slug = params.slug
 
   // Verificar se usuário tem acesso premium
   if (!profile?.is_premium) {
