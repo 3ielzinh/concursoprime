@@ -110,7 +110,8 @@ export default function ModuleDetailClient({ module, materials }: Props) {
                 </button>
                 <a
                   href={material.file_url}
-                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-full px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg transition text-xs text-center"
                 >
                   ⬇️ Baixar
@@ -164,7 +165,8 @@ export default function ModuleDetailClient({ module, materials }: Props) {
                 
                 <a
                   href={selectedMaterial.file_url}
-                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="px-6 py-3 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition inline-flex items-center gap-2"
                 >
                   <span>⬇️</span>
@@ -184,7 +186,8 @@ export default function ModuleDetailClient({ module, materials }: Props) {
               
               <a
                 href={selectedMaterial.file_url}
-                download
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-4 py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition inline-flex items-center gap-2"
               >
                 <span>⬇️</span>
