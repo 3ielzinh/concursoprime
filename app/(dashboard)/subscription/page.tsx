@@ -124,7 +124,7 @@ export default async function SubscriptionPage() {
               Plano PRO 👑
             </h3>
             <p className="text-4xl font-bold text-black mb-6">
-              R$ 49<span className="text-lg">/mês</span>
+              R$ 29,90<span className="text-lg">/mês</span>
             </p>
 
             <ul className="space-y-3 mb-8">

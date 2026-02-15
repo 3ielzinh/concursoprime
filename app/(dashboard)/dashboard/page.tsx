@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ProPopup } from '../components/ProPopup'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -87,8 +86,6 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <ProPopup isPremium={profile?.is_premium || false} />
-      
       <div className="space-y-4 sm:space-y-6">
         {/* Header com botão */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

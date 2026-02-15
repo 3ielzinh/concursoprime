@@ -177,7 +177,7 @@ export default async function ModulesPage() {
               </div>
 
               <Link
-                href={profile?.is_premium ? module.link : '/dashboard/subscription'}
+                href={profile?.is_premium ? module.link : '/subscription'}
                 className="block w-full text-center py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black text-sm font-semibold rounded-lg transition flex items-center justify-center gap-2 group-hover:scale-[1.02] transform"
               >
                 <span>Acesse Aqui</span>
