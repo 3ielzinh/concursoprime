@@ -209,7 +209,7 @@ export default function ModuleDetailClient({ module, moduleSlug, materials }: Pr
                   {/* Conteúdo da Pasta */}
                   {isExpanded && (
                     <div className="border-t border-gray-800 p-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {folderMaterials.map((material) => (
                           <div 
                             key={material.id}
@@ -268,7 +268,7 @@ export default function ModuleDetailClient({ module, moduleSlug, materials }: Pr
         </div>
       ) : (
         // Visualização em Grade (original)
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {materials.map((material) => (
             <div 
               key={material.id}

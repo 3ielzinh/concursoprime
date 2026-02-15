@@ -60,95 +60,122 @@ export default async function MaterialViewPage({
     .order('display_order', { ascending: true })
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col">
-      {/* Header */}
-      <header className="bg-[#1a1a1a] border-b border-gray-800 sticky top-0 z-10">
-        <div className="max-w-screen-2xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <Link
-                href={`/modules/${slug}`}
-                className="text-gray-400 hover:text-[#D4AF37] transition flex-shrink-0"
-                title="Voltar para o módulo"
-              >
-                <span className="text-2xl">←</span>
-              </Link>
-              
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg flex-shrink-0">{material.modules.icon}</span>
-                  <span className="text-gray-400 text-sm truncate">
-                    {material.modules.title}
-                  </span>
-                </div>
-                <h1 className="text-white font-semibold text-sm sm:text-base truncate">
-                  {material.title}
-                </h1>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {material.file_size && (
-                <span className="hidden sm:inline-flex text-xs text-gray-500 items-center gap-1">
-                  <span>📦</span>
-                  {material.file_size}
-                </span>
-              )}
-              {material.pages && (
-                <span className="hidden sm:inline-flex text-xs text-gray-500 items-center gap-1">
-                  <span>📄</span>
-                  {material.pages} pág.
-                </span>
-              )}
-              
-              <a
-                href={material.file_url}
-                download
-                className="px-3 py-1.5 bg-[#D4AF37] hover:bg-[#FFD700] text-black text-sm font-semibold rounded transition"
-              >
-                <span className="hidden sm:inline">⬇️ Download</span>
-                <span className="sm:hidden">⬇️</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Viewer */}
-      <main className="flex-1 flex">
-        <MaterialViewer material={material} />
-      </main>
-
-      {/* Sidebar com outros materiais (opcional) */}
+    <div className="min-h-screen bg-[#0a0a0a] flex">
+      {/* Sidebar com outros materiais */}
       {otherMaterials && otherMaterials.length > 1 && (
-        <aside className="hidden lg:block fixed right-0 top-16 bottom-0 w-64 bg-[#1a1a1a] border-l border-gray-800 overflow-y-auto">
-          <div className="p-4">
-            <h3 className="text-white font-semibold mb-3 text-sm">
-              Outros materiais
+        <aside className="hidden lg:flex flex-col w-72 bg-[#1a1a1a] border-r border-gray-800">
+          <div className="p-4 border-b border-gray-800">
+            <Link
+              href={`/modules/${slug}`}
+              className="inline-flex items-center gap-2 text-gray-400 hover:text-[#D4AF37] transition text-sm"
+            >
+              <span>←</span>
+              <span>Voltar ao módulo</span>
+            </Link>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4">
+            <h3 className="text-white font-semibold mb-3 text-sm flex items-center gap-2">
+              <span>📚</span>
+              <span>Materiais do Módulo</span>
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-1">
               {otherMaterials.map((mat) => (
                 <Link
                   key={mat.id}
                   href={`/modules/${slug}/material/${mat.id}`}
-                  className={`block p-2 rounded text-sm transition ${
+                  className={`block p-3 rounded-lg text-sm transition group ${
                     mat.id === id
-                      ? 'bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]'
-                      : 'text-gray-400 hover:bg-[#252525] hover:text-white'
+                      ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30'
+                      : 'text-gray-400 hover:bg-[#252525] hover:text-white border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-base">
+                    <span className="text-lg flex-shrink-0">
                       {mat.type === 'pdf' ? '📄' : mat.type === 'video' ? '🎥' : '📎'}
                     </span>
-                    <span className="truncate">{mat.title}</span>
+                    <span className="truncate flex-1">{mat.title}</span>
+                    {mat.id === id && (
+                      <span className="text-xs bg-[#D4AF37] text-black px-2 py-0.5 rounded font-medium">
+                        Atual
+                      </span>
+                    )}
                   </div>
                 </Link>
               ))}
             </div>
           </div>
+          
+          <div className="p-4 border-t border-gray-800">
+            <div className="text-xs text-gray-500 text-center">
+              {otherMaterials.length} {otherMaterials.length === 1 ? 'material' : 'materiais'} disponíveis
+            </div>
+          </div>
         </aside>
       )}
+
+      {/* Conteúdo Principal */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="bg-[#1a1a1a] border-b border-gray-800 sticky top-0 z-10 shadow-lg">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <Link
+                  href={`/modules/${slug}`}
+                  className="lg:hidden text-gray-400 hover:text-[#D4AF37] transition flex-shrink-0"
+                  title="Voltar para o módulo"
+                >
+                  <span className="text-2xl">←</span>
+                </Link>
+                
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg flex-shrink-0">{material.modules.icon}</span>
+                    <span className="text-gray-400 text-xs sm:text-sm truncate">
+                      {material.modules.title}
+                    </span>
+                  </div>
+                  <h1 className="text-white font-semibold text-sm sm:text-base truncate">
+                    {material.title}
+                  </h1>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {material.file_size && (
+                  <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#252525] rounded text-xs text-gray-400">
+                    <span>📦</span>
+                    <span>{material.file_size}</span>
+                  </div>
+                )}
+                {material.pages && (
+                  <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#252525] rounded text-xs text-gray-400">
+                    <span>📄</span>
+                    <span>{material.pages} pág.</span>
+                  </div>
+                )}
+                
+                <a
+                  href={material.file_url}
+                  download
+                  className="px-3 py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black text-xs sm:text-sm font-semibold rounded-lg transition inline-flex items-center gap-1.5 shadow-md hover:shadow-lg"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span className="hidden sm:inline">Download</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Viewer */}
+        <main className="flex-1">
+          <MaterialViewer material={material} />
+        </main>
+      </div>
     </div>
   )
 }
