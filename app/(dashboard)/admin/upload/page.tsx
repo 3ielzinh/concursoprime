@@ -4,6 +4,26 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
+// Função para sanitizar nomes de arquivo (remove acentos, espaços e caracteres especiais)
+function sanitizeFileName(fileName: string): string {
+  // Separar nome e extensão
+  const lastDotIndex = fileName.lastIndexOf('.')
+  const name = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName
+  const extension = lastDotIndex > 0 ? fileName.substring(lastDotIndex) : ''
+
+  // Normalizar e remover acentos
+  const normalized = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacríticos
+    .replace(/[^\w\s-]/g, '') // Remove caracteres especiais (mantém letras, números, espaços, hífens)
+    .replace(/\s+/g, '-') // Substitui espaços por hífens
+    .replace(/-+/g, '-') // Remove hífens duplicados
+    .replace(/^-+|-+$/g, '') // Remove hífens no início/fim
+    .toLowerCase()
+
+  return normalized + extension.toLowerCase()
+}
+
 interface Module {
   id: string
   slug: string
@@ -93,7 +113,8 @@ export default function UploadMaterialsPage() {
       for (const fileData of files) {
         try {
           // 1. Upload do arquivo para o Supabase Storage
-          const fileName = `${selectedModuleData.slug}/${Date.now()}-${fileData.file.name}`
+          const sanitizedName = sanitizeFileName(fileData.file.name)
+          const fileName = `${selectedModuleData.slug}/${Date.now()}-${sanitizedName}`
           const { error: uploadError } = await supabase.storage
             .from('materials')
             .upload(fileName, fileData.file)
