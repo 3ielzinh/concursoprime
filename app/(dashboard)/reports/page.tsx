@@ -1,19 +1,19 @@
 export default function ReportsPage() {
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-          <span className="text-4xl">📈</span>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">
+          <span className="text-3xl sm:text-4xl">📈</span>
           Relatórios e Progresso
         </h1>
-        <p className="text-gray-400">
+        <p className="text-sm sm:text-base text-gray-400">
           Acompanhe sua evolução ao longo do tempo
         </p>
       </div>
 
       {/* Resumo Geral */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-[#1a1a1a] p-6 rounded-lg border border-gray-800">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+        <div className="bg-[#1a1a1a] p-3 sm:p-6 rounded-lg border border-gray-800">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-gray-400">Total de Horas</h3>
             <span className="text-2xl">⏱️</span>

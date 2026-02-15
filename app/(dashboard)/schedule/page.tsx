@@ -62,18 +62,18 @@ export default function SchedulePage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-          <span className="text-4xl">📅</span>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">
+          <span className="text-3xl sm:text-4xl">📅</span>
           Cronograma de Estudos
         </h1>
-        <p className="text-gray-400">
+        <p className="text-sm sm:text-base text-gray-400">
           Organize sua rotina de estudos semanalmente
         </p>
       </div>
 
-      <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-        <div className="bg-[#1a1a1a] p-6 rounded-lg border border-gray-800 flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col gap-3 sm:gap-4 overflow-hidden">
+        <div className="bg-[#1a1a1a] p-3 sm:p-6 rounded-lg border border-gray-800 flex-1 flex flex-col overflow-hidden">
           {/* Calendário Semanal */}
           <div className="overflow-x-auto overflow-y-auto border border-gray-700 rounded-lg flex-1">
             <table className="w-full border-collapse">
@@ -160,8 +160,8 @@ export default function SchedulePage() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+          <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2">
               <span>📝</span>
               Adicionar ao Cronograma
             </h2>
@@ -194,7 +194,7 @@ export default function SchedulePage() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Cor
                 </label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 sm:grid-cols-4 gap-2">
                   {colors.map((c) => (
                     <button
                       key={c.value}

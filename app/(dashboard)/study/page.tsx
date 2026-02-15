@@ -122,20 +122,20 @@ export default function StudyPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-full">
+    <div className="flex items-center justify-center min-h-full px-4">
       <div className="w-full max-w-2xl">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
-          <span className="text-4xl">✍️</span>
+      <div className="mb-6 sm:mb-8 text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+          <span className="text-3xl sm:text-4xl">✍️</span>
           Registrar Estudo
         </h1>
-        <p className="text-gray-400">
+        <p className="text-sm sm:text-base text-gray-400">
           Registre suas sessões de estudo e acompanhe seu progresso
         </p>
       </div>
 
       <div>
-        <div className="bg-[#1a1a1a] p-8 rounded-lg border border-gray-800">
+        <div className="bg-[#1a1a1a] p-4 sm:p-8 rounded-lg border border-gray-800">
           {success && (
             <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400">
               ✅ Sessão de estudo registrada com sucesso!

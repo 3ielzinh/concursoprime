@@ -89,16 +89,16 @@ export default async function DashboardPage() {
     <>
       <ProPopup isPremium={profile?.is_premium || false} />
       
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header com botão */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">📊</span>
-            <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+            <span className="text-2xl sm:text-3xl">📊</span>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">Dashboard</h1>
           </div>
           <Link
             href="/study"
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
+            className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition text-sm sm:text-base w-full sm:w-auto justify-center"
           >
             <span>⊕</span>
             <span>Registrar Estudo</span>
@@ -106,9 +106,9 @@ export default async function DashboardPage() {
         </div>
 
         {/* Stats Cards - 4 cards no topo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Card 1 - Total de Horas */}
-          <div className="bg-[#1a1a1a] border-l-4 border-blue-500 rounded-lg p-6">
+          <div className="bg-[#1a1a1a] border-l-4 border-blue-500 rounded-lg p-3 sm:p-6">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">TOTAL DE HORAS</p>

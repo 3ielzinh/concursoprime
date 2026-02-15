@@ -16,12 +16,12 @@ export default async function SubscriptionPage() {
   if (profile?.is_premium) {
     return (
       <div>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-            <span className="text-4xl">👑</span>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">
+            <span className="text-3xl sm:text-4xl">👑</span>
             Plano PRO Ativo
           </h1>
-          <p className="text-gray-400">
+          <p className="text-sm sm:text-base text-gray-400">
             Você já é um membro PRO!
           </p>
         </div>
