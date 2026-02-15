@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface Material {
   id: string
@@ -16,6 +16,32 @@ interface MaterialViewerProps {
 function MaterialViewer({ material }: MaterialViewerProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  // Timeout para remover loading mesmo se onLoad não disparar
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1500) // Remove loading após 1.5 segundos no máximo
+
+    return () => clearTimeout(timer)
+  }, [material.id]) // Resetar quando trocar de material
+
+  // Preload do PDF para carregamento mais rápido
+  useEffect(() => {
+    if (material.type === 'pdf' && material.file_url) {
+      // Prefetch do PDF
+      const link = document.createElement('link')
+      link.rel = 'prefetch'
+      link.href = material.file_url
+      link.as = 'document'
+      document.head.appendChild(link)
+
+      return () => {
+        document.head.removeChild(link)
+      }
+    }
+  }, [material.file_url, material.type])
 
   // Toggle fullscreen
   const toggleFullscreen = () => {
@@ -42,18 +68,17 @@ function MaterialViewer({ material }: MaterialViewerProps) {
 
   return (
     <div className="w-full h-full relative bg-[#0a0a0a]">
-      {/* Indicador de carregamento aprimorado */}
+      {/* Indicador de carregamento otimizado */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center z-20 bg-[#0a0a0a]/95 backdrop-blur-sm">
+        <div className="absolute inset-0 flex items-center justify-center z-20 bg-[#0a0a0a] backdrop-blur-sm transition-opacity duration-300">
           <div className="text-center">
-            <div className="relative mb-4">
-              <div className="w-16 h-16 border-4 border-gray-700 border-t-[#D4AF37] rounded-full animate-spin mx-auto"></div>
+            <div className="relative mb-3">
+              <div className="w-12 h-12 border-3 border-gray-700 border-t-[#D4AF37] rounded-full animate-spin mx-auto"></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl">📄</span>
+                <span className="text-xl">📄</span>
               </div>
             </div>
-            <p className="text-white font-medium mb-1">Carregando material...</p>
-            <p className="text-gray-500 text-sm">Aguarde enquanto preparamos a visualização</p>
+            <p className="text-white font-medium text-sm">Carregando...</p>
           </div>
         </div>
       )}
@@ -80,28 +105,33 @@ function MaterialViewer({ material }: MaterialViewerProps) {
       )}
 
       {material.type === 'pdf' ? (
-        // Visualizador de PDF em tela cheia aprimorado
+        // Visualizador de PDF otimizado
         <div className="w-full h-full flex flex-col">
           <iframe
-            src={`${material.file_url}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`}
+            ref={iframeRef}
+            src={`${material.file_url}#toolbar=1&navpanes=0&scrollbar=1&view=FitH&zoom=page-width&pagemode=none`}
             className="w-full h-full border-0"
             title={material.title}
-            onLoad={() => setIsLoading(false)}
+            loading="eager"
+            onLoad={() => {
+              setIsLoading(false)
+            }}
             style={{ minHeight: 'calc(100vh - 64px)' }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           />
         </div>
       ) : material.type === 'video' ? (
-        // Player de Vídeo aprimorado
+        // Player de Vídeo otimizado
         <div className="w-full h-full flex items-center justify-center p-4 bg-black">
           <video
             src={material.file_url}
             controls
             controlsList="nodownload"
             className="max-w-full max-h-full rounded-lg shadow-2xl"
-            preload="metadata"
-            onLoadStart={() => setIsLoading(true)}
-            onLoadedData={() => setIsLoading(false)}
+            preload="auto"
+            onCanPlay={() => setIsLoading(false)}
             autoPlay
+            playsInline
             style={{ maxHeight: 'calc(100vh - 100px)' }}
           >
             Seu navegador não suporta a reprodução de vídeos.

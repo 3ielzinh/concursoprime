@@ -26,6 +26,7 @@ interface Props {
 
 export default function ModuleDetailClient({ module, moduleSlug, materials }: Props) {
   const [viewMode, setViewMode] = useState<'folders' | 'grid'>('folders')
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   
   // Organizar materiais por estrutura de pastas
   const organizeByFolders = () => {
@@ -59,41 +60,6 @@ export default function ModuleDetailClient({ module, moduleSlug, materials }: Pr
   }
 
   const folderStructure = organizeByFolders()
-  
-  // Inicializar com todas as pastas expandidas
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
-    return new Set(Array.from(folderStructure.keys()))
-  })
-
-  const toggleFolder = (folderPath: string) => {
-    const newExpanded = new Set(expandedFolders)
-    if (newExpanded.has(folderPath)) {
-      newExpanded.delete(folderPath)
-    } else {
-      newExpanded.add(folderPath)
-    }
-    setExpandedFolders(newExpanded)
-  }
-
-  const toggleAllFolders = () => {
-    const allFolders = Array.from(folderStructure.keys())
-    if (expandedFolders.size === allFolders.length) {
-      // Se todas estão expandidas, colapsar todas
-      setExpandedFolders(new Set())
-    } else {
-      // Expandir todas
-      setExpandedFolders(new Set(allFolders))
-    }
-  }
-
-  const handleViewModeChange = (mode: 'folders' | 'grid') => {
-    setViewMode(mode)
-    if (mode === 'folders') {
-      // Expandir todas as pastas ao entrar no modo de pastas
-      const allFolders = Array.from(folderStructure.keys())
-      setExpandedFolders(new Set(allFolders))
-    }
-  }
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -127,19 +93,10 @@ export default function ModuleDetailClient({ module, moduleSlug, materials }: Pr
 
       {/* Toggle de visualização */}
       {materials.length > 0 && (
-        <div className="mb-6 flex justify-between items-center">
-          {viewMode === 'folders' && (
+        <div className="mb-6 flex justify-end items-center">
+          <div className="inline-flex bg-[#1a1a1a] border border-gray-800 rounded-lg p-1">
             <button
-              onClick={toggleAllFolders}
-              className="text-sm text-gray-400 hover:text-[#D4AF37] transition"
-            >
-              {expandedFolders.size === folderStructure.size ? '📁 Colapsar Todas' : '📂 Expandir Todas'}
-            </button>
-          )}
-          
-          <div className={`inline-flex bg-[#1a1a1a] border border-gray-800 rounded-lg p-1 ${viewMode !== 'folders' ? 'ml-auto' : ''}`}>
-            <button
-              onClick={() => handleViewModeChange('folders')}
+              onClick={() => setViewMode('folders')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition ${
                 viewMode === 'folders'
                   ? 'bg-[#D4AF37] text-black'
@@ -149,7 +106,7 @@ export default function ModuleDetailClient({ module, moduleSlug, materials }: Pr
               📁 Por Pastas
             </button>
             <button
-              onClick={() => handleViewModeChange('grid')}
+              onClick={() => setViewMode('grid')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition ${
                 viewMode === 'grid'
                   ? 'bg-[#D4AF37] text-black'
@@ -173,99 +130,127 @@ export default function ModuleDetailClient({ module, moduleSlug, materials }: Pr
           </p>
         </div>
       ) : viewMode === 'folders' ? (
-        // Visualização por Pastas
-        <div className="space-y-4">
-          {Array.from(folderStructure.entries())
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([folderPath, folderMaterials]) => {
-              const isExpanded = expandedFolders.has(folderPath)
-              
-              return (
-                <div 
-                  key={folderPath}
-                  className="bg-[#1a1a1a] border border-gray-800 rounded-lg overflow-hidden"
-                >
-                  {/* Header da Pasta */}
+        // Visualização por Pastas - Grade 4 por linha
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from(folderStructure.entries())
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([folderPath, folderMaterials]) => {
+                
+                return (
                   <button
-                    onClick={() => toggleFolder(folderPath)}
-                    className="w-full p-4 flex items-center justify-between hover:bg-[#252525] transition"
+                    key={folderPath}
+                    onClick={() => setSelectedFolder(folderPath)}
+                    className="bg-[#1a1a1a] border border-gray-800 rounded-lg overflow-hidden flex flex-col hover:border-[#D4AF37]/50 hover:bg-[#252525] transition p-4 text-left group"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{isExpanded ? '📂' : '📁'}</span>
-                      <div className="text-left">
-                        <h3 className="text-white font-semibold">
-                          {folderPath ? folderPath : '📂 Arquivos na Raiz'}
-                        </h3>
-                        <p className="text-gray-400 text-sm">
-                          {folderMaterials.length} arquivo{folderMaterials.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-4xl group-hover:scale-110 transition">📁</span>
+                      <span className="text-[#D4AF37] text-xs font-semibold px-2 py-1 bg-[#D4AF37]/10 rounded">
+                        {folderMaterials.length}
+                      </span>
                     </div>
-                    <span className="text-gray-400 text-xl">
-                      {isExpanded ? '▼' : '▶'}
-                    </span>
+                    <div>
+                      <h3 className="text-white font-semibold text-sm line-clamp-2 mb-2 group-hover:text-[#D4AF37] transition">
+                        {folderPath ? folderPath : 'Arquivos na Raiz'}
+                      </h3>
+                      <p className="text-gray-400 text-xs">
+                        {folderMaterials.length} arquivo{folderMaterials.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
                   </button>
+                )
+              })}
+          </div>
 
-                  {/* Conteúdo da Pasta */}
-                  {isExpanded && (
-                    <div className="border-t border-gray-800 p-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {folderMaterials.map((material) => (
-                          <div 
-                            key={material.id}
-                            className="bg-[#0a0a0a] border border-gray-800 rounded-lg p-3 hover:border-[#D4AF37]/50 transition group flex flex-col"
-                          >
-                            <div className="flex items-start gap-2 mb-2">
-                              <div className="text-2xl flex-shrink-0">
-                                {getFileIcon(material.type)}
-                              </div>
-                              
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-white font-medium text-xs mb-1 group-hover:text-[#D4AF37] transition line-clamp-2">
-                                  {material.title}
-                                </h4>
-                              </div>
-                            </div>
-                            
-                            <div className="flex flex-col gap-1 text-xs text-gray-500 mb-2">
-                              {material.file_size && (
-                                <span className="flex items-center gap-1">
-                                  <span>📦</span>
-                                  {material.file_size}
-                                </span>
-                              )}
-                              {material.pages && (
-                                <span className="flex items-center gap-1">
-                                  <span>📄</span>
-                                  {material.pages} páginas
-                                </span>
-                              )}
-                            </div>
-                            
-                            <div className="mt-auto flex flex-col gap-1.5">
-                              <Link
-                                href={`/modules/${moduleSlug}/material/${material.id}`}
-                                className="w-full px-2 py-1.5 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded text-xs text-center"
-                              >
-                                📖 Abrir
-                              </Link>
-                              <a
-                                href={material.file_url}
-                                download
-                                className="w-full px-2 py-1.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded text-xs text-center"
-                              >
-                                ⬇️ Baixar
-                              </a>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+          {/* Modal com materiais da pasta */}
+          {selectedFolder !== null && (
+            <div 
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setSelectedFolder(null)}
+            >
+              <div 
+                className="bg-[#1a1a1a] border border-gray-800 rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header do Modal */}
+                <div className="p-4 border-b border-gray-800 flex items-center justify-between sticky top-0 bg-[#1a1a1a] z-10">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <span className="text-3xl">📂</span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-white font-semibold text-lg truncate">
+                        {selectedFolder ? selectedFolder : 'Arquivos na Raiz'}
+                      </h3>
+                      <p className="text-gray-400 text-sm">
+                        {folderStructure.get(selectedFolder)?.length} arquivo{folderStructure.get(selectedFolder)?.length !== 1 ? 's' : ''}
+                      </p>
                     </div>
-                  )}
+                  </div>
+                  <button
+                    onClick={() => setSelectedFolder(null)}
+                    className="text-gray-400 hover:text-white text-2xl ml-4 flex-shrink-0 w-8 h-8 flex items-center justify-center rounded hover:bg-gray-800 transition"
+                  >
+                    ×
+                  </button>
                 </div>
-              )
-            })}
-        </div>
+
+                {/* Conteúdo do Modal */}
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {folderStructure.get(selectedFolder)?.map((material) => (
+                      <div 
+                        key={material.id}
+                        className="bg-[#0a0a0a] border border-gray-800 rounded-lg p-4 hover:border-[#D4AF37]/50 transition group flex flex-col"
+                      >
+                        <div className="flex items-start gap-2 mb-3">
+                          <div className="text-3xl flex-shrink-0">
+                            {getFileIcon(material.type)}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-white font-medium text-sm mb-1 group-hover:text-[#D4AF37] transition line-clamp-2">
+                              {material.title}
+                            </h4>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-1 text-xs text-gray-500 mb-3">
+                          {material.file_size && (
+                            <span className="flex items-center gap-1">
+                              <span>📦</span>
+                              {material.file_size}
+                            </span>
+                          )}
+                          {material.pages && (
+                            <span className="flex items-center gap-1">
+                              <span>📄</span>
+                              {material.pages} páginas
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="mt-auto flex flex-col gap-2">
+                          <Link
+                            href={`/modules/${moduleSlug}/material/${material.id}`}
+                            className="w-full px-3 py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded text-xs text-center transition"
+                          >
+                            📖 Abrir
+                          </Link>
+                          <a
+                            href={material.file_url}
+                            download
+                            className="w-full px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded text-xs text-center transition"
+                          >
+                            ⬇️ Baixar
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         // Visualização em Grade (original)
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

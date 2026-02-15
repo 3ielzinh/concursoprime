@@ -6,6 +6,14 @@ import MaterialViewer from './MaterialViewer'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+// Adicionar headers de cache para recursos estáticos
+export async function generateMetadata() {
+  return {
+    title: 'Material | Concurso PRO',
+    description: 'Visualize seus materiais de estudo',
+  }
+}
+
 export default async function MaterialViewPage({
   params,
 }: {
@@ -17,34 +25,52 @@ export default async function MaterialViewPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Buscar perfil do usuário
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  // Buscar dados em paralelo para melhor performance
+  const [profileResult, materialResult] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('materials')
+      .select(`
+        id,
+        title,
+        type,
+        file_url,
+        file_size,
+        pages,
+        module_id,
+        modules:module_id (
+          slug,
+          title,
+          icon
+        )
+      `)
+      .eq('id', id)
+      .single()
+  ])
+
+  const profile = profileResult.data
+  const materialData = materialResult.data
+  const error = materialResult.error
 
   // Verificar se usuário tem acesso premium
   if (!profile?.is_premium) {
     redirect('/subscription')
   }
 
-  // Buscar material e módulo
-  const { data: material, error } = await supabase
-    .from('materials')
-    .select(`
-      *,
-      modules:module_id (
-        slug,
-        title,
-        icon
-      )
-    `)
-    .eq('id', id)
-    .single()
-
-  if (error || !material) {
+  if (error || !materialData) {
     notFound()
+  }
+
+  // Extrair o módulo (Supabase retorna array para relações)
+  const moduleInfo = Array.isArray(materialData.modules) ? materialData.modules[0] : materialData.modules
+  
+  const material = {
+    ...materialData,
+    modules: moduleInfo
   }
 
   // Verificar se o material pertence ao módulo correto
@@ -52,12 +78,13 @@ export default async function MaterialViewPage({
     notFound()
   }
 
-  // Buscar outros materiais do mesmo módulo
+  // Buscar apenas título e tipo dos outros materiais (menos dados = mais rápido)
   const { data: otherMaterials } = await supabase
     .from('materials')
     .select('id, title, type')
     .eq('module_id', material.module_id)
     .order('display_order', { ascending: true })
+    .limit(50)
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex">
@@ -84,6 +111,7 @@ export default async function MaterialViewPage({
                 <Link
                   key={mat.id}
                   href={`/modules/${slug}/material/${mat.id}`}
+                  prefetch={false}
                   className={`block p-3 rounded-lg text-sm transition group ${
                     mat.id === id
                       ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30'
