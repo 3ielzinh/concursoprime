@@ -36,6 +36,11 @@ interface FileWithMetadata {
   title: string
   description: string
   pages: number
+  folderPath?: string // Caminho relativo da pasta
+}
+
+interface FolderStructure {
+  [key: string]: File[]
 }
 
 export default function UploadMaterialsPage() {
@@ -43,6 +48,8 @@ export default function UploadMaterialsPage() {
   const [modules, setModules] = useState<Module[]>([])
   const [selectedModule, setSelectedModule] = useState('')
   const [files, setFiles] = useState<FileWithMetadata[]>([])
+  const [folderStructure, setFolderStructure] = useState<FolderStructure>({})
+  const [uploadMode, setUploadMode] = useState<'files' | 'folder'>('files')
   const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
@@ -74,6 +81,46 @@ export default function UploadMaterialsPage() {
     }))
 
     setFiles([...files, ...newFiles])
+  }
+
+  function handleFolderChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = Array.from(e.target.files || [])
+    
+    if (selectedFiles.length === 0) return
+
+    // Organizar arquivos por estrutura de pastas
+    const structure: FolderStructure = {}
+    const filesWithMeta: FileWithMetadata[] = []
+
+    selectedFiles.forEach(file => {
+      const relativePath = file.webkitRelativePath || file.name
+      const pathParts = relativePath.split('/')
+      
+      // Remover o nome da pasta raiz (primeira parte do path)
+      const folderPath = pathParts.length > 2 
+        ? pathParts.slice(1, -1).join('/') 
+        : pathParts.length > 1 
+        ? pathParts[0] 
+        : ''
+
+      // Adicionar à estrutura
+      if (!structure[folderPath]) {
+        structure[folderPath] = []
+      }
+      structure[folderPath].push(file)
+
+      // Adicionar à lista de arquivos com metadados
+      filesWithMeta.push({
+        file,
+        title: file.name.replace('.pdf', ''),
+        description: '',
+        pages: 0,
+        folderPath: folderPath
+      })
+    })
+
+    setFolderStructure(structure)
+    setFiles(filesWithMeta)
   }
 
   function updateFileMetadata(index: number, field: keyof Omit<FileWithMetadata, 'file'>, value: string | number) {
@@ -114,7 +161,20 @@ export default function UploadMaterialsPage() {
         try {
           // 1. Upload do arquivo para o Supabase Storage
           const sanitizedName = sanitizeFileName(fileData.file.name)
-          const fileName = `${selectedModuleData.slug}/${Date.now()}-${sanitizedName}`
+          
+          // Construir o caminho do arquivo incluindo a estrutura de pastas
+          let fileName = ''
+          if (uploadMode === 'folder' && fileData.folderPath) {
+            // Sanitizar o caminho da pasta também
+            const sanitizedFolderPath = fileData.folderPath
+              .split('/')
+              .map(folder => sanitizeFileName(folder))
+              .join('/')
+            fileName = `${selectedModuleData.slug}/${sanitizedFolderPath}/${sanitizedName}`
+          } else {
+            fileName = `${selectedModuleData.slug}/${Date.now()}-${sanitizedName}`
+          }
+
           const { error: uploadError } = await supabase.storage
             .from('materials')
             .upload(fileName, fileData.file)
@@ -134,11 +194,15 @@ export default function UploadMaterialsPage() {
           const fileSizeInMB = (fileData.file.size / (1024 * 1024)).toFixed(2)
 
           // 4. Inserir registro na tabela materials
+          const materialTitle = uploadMode === 'folder' && fileData.folderPath
+            ? `${fileData.folderPath}/${fileData.title}`
+            : fileData.title
+
           const { error: insertError } = await supabase
             .from('materials')
             .insert({
               module_id: selectedModule,
-              title: fileData.title,
+              title: materialTitle,
               description: fileData.description || null,
               type: 'pdf',
               file_url: publicUrl,
@@ -176,6 +240,7 @@ export default function UploadMaterialsPage() {
       // Limpar formulário se tudo deu certo
       if (errorCount === 0) {
         setFiles([])
+        setFolderStructure({})
         setSelectedModule('')
       }
     } catch (error) {
@@ -233,26 +298,82 @@ export default function UploadMaterialsPage() {
         </select>
       </div>
 
+      {/* Modo de Upload */}
+      <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 mb-6">
+        <h2 className="text-xl font-semibold text-white mb-4">2. Escolha o Modo de Upload</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => {
+              setUploadMode('files')
+              setFiles([])
+              setFolderStructure({})
+            }}
+            disabled={uploading}
+            className={`p-4 rounded-lg border-2 transition ${
+              uploadMode === 'files'
+                ? 'border-[#D4AF37] bg-[#D4AF37]/10'
+                : 'border-gray-700 hover:border-gray-600'
+            }`}
+          >
+            <div className="text-3xl mb-2">📄</div>
+            <h3 className="text-white font-semibold mb-1">Arquivos Individuais</h3>
+            <p className="text-gray-400 text-sm">
+              Selecione múltiplos PDFs sem estrutura de pastas
+            </p>
+          </button>
+
+          <button
+            onClick={() => {
+              setUploadMode('folder')
+              setFiles([])
+              setFolderStructure({})
+            }}
+            disabled={uploading}
+            className={`p-4 rounded-lg border-2 transition ${
+              uploadMode === 'folder'
+                ? 'border-[#D4AF37] bg-[#D4AF37]/10'
+                : 'border-gray-700 hover:border-gray-600'
+            }`}
+          >
+            <div className="text-3xl mb-2">📁</div>
+            <h3 className="text-white font-semibold mb-1">Pasta Completa</h3>
+            <p className="text-gray-400 text-sm">
+              Mantenha a estrutura de pastas e subpastas
+            </p>
+          </button>
+        </div>
+      </div>
+
       {/* Upload de Arquivos */}
       <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-6 mb-6">
-        <h2 className="text-xl font-semibold text-white mb-4">2. Adicione os PDFs</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">3. Adicione os PDFs</h2>
         
         <div className="mb-4">
           <label className="block w-full">
             <div className="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center hover:border-[#D4AF37] transition cursor-pointer">
-              <div className="text-5xl mb-3">📄</div>
+              <div className="text-5xl mb-3">{uploadMode === 'folder' ? '📁' : '📄'}</div>
               <p className="text-white font-semibold mb-1">
-                Clique para selecionar PDFs
+                {uploadMode === 'folder' 
+                  ? 'Clique para selecionar uma pasta'
+                  : 'Clique para selecionar PDFs'
+                }
               </p>
               <p className="text-gray-400 text-sm">
-                Você pode selecionar múltiplos arquivos de uma vez
+                {uploadMode === 'folder'
+                  ? 'A estrutura de pastas será mantida no upload'
+                  : 'Você pode selecionar múltiplos arquivos de uma vez'
+                }
               </p>
             </div>
             <input
               type="file"
               accept=".pdf"
-              multiple
-              onChange={handleFileChange}
+              multiple={uploadMode === 'files'}
+              // @ts-expect-error - webkitdirectory é uma propriedade válida mas não está nos tipos
+              webkitdirectory={uploadMode === 'folder' ? 'true' : undefined}
+              {...(uploadMode === 'folder' ? { directory: 'true' } : {})}
+              onChange={uploadMode === 'folder' ? handleFolderChange : handleFileChange}
               className="hidden"
               disabled={uploading}
             />
@@ -266,75 +387,119 @@ export default function UploadMaterialsPage() {
               Arquivos selecionados ({files.length})
             </h3>
             
-            {files.map((fileData, index) => (
-              <div
-                key={index}
-                className="bg-[#0a0a0a] border border-gray-800 rounded-lg p-4"
-              >
-                <div className="flex items-start gap-4 mb-3">
-                  <div className="text-3xl">📄</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold truncate mb-1">
-                      {fileData.file.name}
-                    </p>
-                    <p className="text-gray-400 text-sm">
-                      {(fileData.file.size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
+            {uploadMode === 'folder' ? (
+              // Visualização organizada por pastas
+              <div className="space-y-4">
+                {Object.entries(folderStructure).map(([folderPath, folderFiles]) => (
+                  <div key={folderPath} className="bg-[#0a0a0a] border border-gray-800 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-800">
+                      <span className="text-xl">📁</span>
+                      <span className="text-[#D4AF37] font-semibold">
+                        {folderPath || 'Raiz'}
+                      </span>
+                      <span className="text-gray-500 text-sm">
+                        ({folderFiles.length} arquivo{folderFiles.length !== 1 ? 's' : ''})
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {files
+                        .filter(f => f.folderPath === folderPath)
+                        .map((fileData, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-3 p-2 bg-[#1a1a1a] rounded"
+                          >
+                            <span className="text-lg">📄</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm truncate">
+                                {fileData.file.name}
+                              </p>
+                              <p className="text-gray-500 text-xs">
+                                {(fileData.file.size / (1024 * 1024)).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      }
+                    </div>
                   </div>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="text-red-400 hover:text-red-300 transition"
-                    disabled={uploading}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">
-                      Título *
-                    </label>
-                    <input
-                      type="text"
-                      value={fileData.title}
-                      onChange={(e) => updateFileMetadata(index, 'title', e.target.value)}
-                      className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded text-white text-sm focus:outline-none focus:border-[#D4AF37]"
-                      placeholder="Nome do material"
-                      disabled={uploading}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">
-                      Páginas
-                    </label>
-                    <input
-                      type="number"
-                      value={fileData.pages || ''}
-                      onChange={(e) => updateFileMetadata(index, 'pages', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded text-white text-sm focus:outline-none focus:border-[#D4AF37]"
-                      placeholder="Ex: 45"
-                      disabled={uploading}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">
-                      Descrição (opcional)
-                    </label>
-                    <input
-                      type="text"
-                      value={fileData.description}
-                      onChange={(e) => updateFileMetadata(index, 'description', e.target.value)}
-                      className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded text-white text-sm focus:outline-none focus:border-[#D4AF37]"
-                      placeholder="Breve descrição"
-                      disabled={uploading}
-                    />
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              // Visualização de arquivos individuais com metadados
+              <>
+                {files.map((fileData, index) => (
+                  <div
+                    key={index}
+                    className="bg-[#0a0a0a] border border-gray-800 rounded-lg p-4"
+                  >
+                    <div className="flex items-start gap-4 mb-3">
+                      <div className="text-3xl">📄</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-semibold truncate mb-1">
+                          {fileData.file.name}
+                        </p>
+                        <p className="text-gray-400 text-sm">
+                          {(fileData.file.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="text-red-400 hover:text-red-300 transition"
+                        disabled={uploading}
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">
+                          Título *
+                        </label>
+                        <input
+                          type="text"
+                          value={fileData.title}
+                          onChange={(e) => updateFileMetadata(index, 'title', e.target.value)}
+                          className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded text-white text-sm focus:outline-none focus:border-[#D4AF37]"
+                          placeholder="Nome do material"
+                          disabled={uploading}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">
+                          Páginas
+                        </label>
+                        <input
+                          type="number"
+                          value={fileData.pages || ''}
+                          onChange={(e) => updateFileMetadata(index, 'pages', parseInt(e.target.value) || 0)}
+                          className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded text-white text-sm focus:outline-none focus:border-[#D4AF37]"
+                          placeholder="Ex: 45"
+                          disabled={uploading}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">
+                          Descrição (opcional)
+                        </label>
+                        <input
+                          type="text"
+                          value={fileData.description}
+                          onChange={(e) => updateFileMetadata(index, 'description', e.target.value)}
+                          className="w-full px-3 py-2 bg-[#1a1a1a] border border-gray-800 rounded text-white text-sm focus:outline-none focus:border-[#D4AF37]"
+                          placeholder="Breve descrição"
+                          disabled={uploading}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -344,6 +509,7 @@ export default function UploadMaterialsPage() {
         <button
           onClick={() => {
             setFiles([])
+            setFolderStructure({})
             setSelectedModule('')
             setMessage('')
           }}
@@ -377,11 +543,13 @@ export default function UploadMaterialsPage() {
         <h3 className="text-lg font-semibold text-blue-400 mb-3">📝 Instruções</h3>
         <ul className="text-gray-300 space-y-2 text-sm">
           <li>• Selecione o módulo de destino antes de adicionar os arquivos</li>
-          <li>• Você pode selecionar múltiplos PDFs de uma vez pressionando Ctrl/Cmd</li>
-          <li>• Preencha os metadados de cada arquivo (título é obrigatório)</li>
-          <li>• O número de páginas ajuda os alunos a planejarem o estudo</li>
+          <li>• Escolha entre upload de arquivos individuais ou pasta completa</li>
+          <li>• <strong>Modo Arquivos Individuais:</strong> Selecione múltiplos PDFs pressionando Ctrl/Cmd</li>
+          <li>• <strong>Modo Pasta Completa:</strong> Toda a estrutura de subpastas será mantida no upload</li>
+          <li>• No modo individual, você pode preencher metadados (título, páginas, descrição)</li>
+          <li>• No modo pasta, os arquivos mantêm seus nomes originais e estrutura</li>
           <li>• O tamanho do arquivo é calculado automaticamente</li>
-          <li>• Os PDFs serão armazenados no Supabase Storage</li>
+          <li>• Os PDFs serão armazenados no Supabase Storage organizadamente</li>
         </ul>
       </div>
     </div>
