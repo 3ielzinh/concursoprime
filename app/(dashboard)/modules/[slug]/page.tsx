@@ -80,6 +80,7 @@ export default async function ModuleDetailPage({
         title: module.title,
         icon: module.icon
       }}
+      moduleSlug={slug}
       materials={(materials || []) as Material[]}
     />
   )

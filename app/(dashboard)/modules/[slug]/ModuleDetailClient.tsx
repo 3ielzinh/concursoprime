@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 
 interface Material {
@@ -20,46 +20,80 @@ interface Module {
 
 interface Props {
   module: Module
+  moduleSlug: string
   materials: Material[]
 }
 
-export default function ModuleDetailClient({ module, materials }: Props) {
-  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleSelectMaterial = (material: Material) => {
-    setSelectedMaterial(material)
-    setIsLoading(true)
-  }
-
-  const handleCloseMaterial = () => {
-    setSelectedMaterial(null)
-    setIsLoading(false)
-  }
-
-  // Close modal with Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && selectedMaterial) {
-        handleCloseMaterial()
+export default function ModuleDetailClient({ module, moduleSlug, materials }: Props) {
+  const [viewMode, setViewMode] = useState<'folders' | 'grid'>('folders')
+  
+  // Organizar materiais por estrutura de pastas
+  const organizeByFolders = () => {
+    const folderMap = new Map<string, Material[]>()
+    
+    materials.forEach(material => {
+      // Extrair pasta do título (ex: "pasta1/pasta2/arquivo.pdf" -> "pasta1/pasta2")
+      const titleParts = material.title.split('/')
+      let folderPath = ''
+      
+      if (titleParts.length > 1) {
+        // Tem pasta no caminho
+        folderPath = titleParts.slice(0, -1).join('/')
+      } else {
+        // Sem pasta, vai para raiz
+        folderPath = ''
       }
-    }
+      
+      if (!folderMap.has(folderPath)) {
+        folderMap.set(folderPath, [])
+      }
+      
+      folderMap.get(folderPath)?.push({
+        ...material,
+        // Título simplificado (só o nome do arquivo)
+        title: titleParts[titleParts.length - 1]
+      })
+    })
+    
+    return folderMap
+  }
 
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [selectedMaterial])
+  const folderStructure = organizeByFolders()
+  
+  // Inicializar com todas as pastas expandidas
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
+    return new Set(Array.from(folderStructure.keys()))
+  })
 
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (selectedMaterial) {
-      document.body.style.overflow = 'hidden'
+  const toggleFolder = (folderPath: string) => {
+    const newExpanded = new Set(expandedFolders)
+    if (newExpanded.has(folderPath)) {
+      newExpanded.delete(folderPath)
     } else {
-      document.body.style.overflow = 'unset'
+      newExpanded.add(folderPath)
     }
-    return () => {
-      document.body.style.overflow = 'unset'
+    setExpandedFolders(newExpanded)
+  }
+
+  const toggleAllFolders = () => {
+    const allFolders = Array.from(folderStructure.keys())
+    if (expandedFolders.size === allFolders.length) {
+      // Se todas estão expandidas, colapsar todas
+      setExpandedFolders(new Set())
+    } else {
+      // Expandir todas
+      setExpandedFolders(new Set(allFolders))
     }
-  }, [selectedMaterial])
+  }
+
+  const handleViewModeChange = (mode: 'folders' | 'grid') => {
+    setViewMode(mode)
+    if (mode === 'folders') {
+      // Expandir todas as pastas ao entrar no modo de pastas
+      const allFolders = Array.from(folderStructure.keys())
+      setExpandedFolders(new Set(allFolders))
+    }
+  }
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -91,6 +125,43 @@ export default function ModuleDetailClient({ module, materials }: Props) {
         </p>
       </div>
 
+      {/* Toggle de visualização */}
+      {materials.length > 0 && (
+        <div className="mb-6 flex justify-between items-center">
+          {viewMode === 'folders' && (
+            <button
+              onClick={toggleAllFolders}
+              className="text-sm text-gray-400 hover:text-[#D4AF37] transition"
+            >
+              {expandedFolders.size === folderStructure.size ? '📁 Colapsar Todas' : '📂 Expandir Todas'}
+            </button>
+          )}
+          
+          <div className={`inline-flex bg-[#1a1a1a] border border-gray-800 rounded-lg p-1 ${viewMode !== 'folders' ? 'ml-auto' : ''}`}>
+            <button
+              onClick={() => handleViewModeChange('folders')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                viewMode === 'folders'
+                  ? 'bg-[#D4AF37] text-black'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              📁 Por Pastas
+            </button>
+            <button
+              onClick={() => handleViewModeChange('grid')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition ${
+                viewMode === 'grid'
+                  ? 'bg-[#D4AF37] text-black'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              ⊞ Grade
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Materials Grid */}
       {materials.length === 0 ? (
         <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-12 text-center">
@@ -101,7 +172,102 @@ export default function ModuleDetailClient({ module, materials }: Props) {
             Novos conteúdos serão adicionados em breve!
           </p>
         </div>
+      ) : viewMode === 'folders' ? (
+        // Visualização por Pastas
+        <div className="space-y-4">
+          {Array.from(folderStructure.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([folderPath, folderMaterials]) => {
+              const isExpanded = expandedFolders.has(folderPath)
+              
+              return (
+                <div 
+                  key={folderPath}
+                  className="bg-[#1a1a1a] border border-gray-800 rounded-lg overflow-hidden"
+                >
+                  {/* Header da Pasta */}
+                  <button
+                    onClick={() => toggleFolder(folderPath)}
+                    className="w-full p-4 flex items-center justify-between hover:bg-[#252525] transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{isExpanded ? '📂' : '📁'}</span>
+                      <div className="text-left">
+                        <h3 className="text-white font-semibold">
+                          {folderPath ? folderPath : '📂 Arquivos na Raiz'}
+                        </h3>
+                        <p className="text-gray-400 text-sm">
+                          {folderMaterials.length} arquivo{folderMaterials.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-gray-400 text-xl">
+                      {isExpanded ? '▼' : '▶'}
+                    </span>
+                  </button>
+
+                  {/* Conteúdo da Pasta */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-800 p-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {folderMaterials.map((material) => (
+                          <div 
+                            key={material.id}
+                            className="bg-[#0a0a0a] border border-gray-800 rounded-lg p-3 hover:border-[#D4AF37]/50 transition group flex flex-col"
+                          >
+                            <div className="flex items-start gap-2 mb-2">
+                              <div className="text-2xl flex-shrink-0">
+                                {getFileIcon(material.type)}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-white font-medium text-xs mb-1 group-hover:text-[#D4AF37] transition line-clamp-2">
+                                  {material.title}
+                                </h4>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col gap-1 text-xs text-gray-500 mb-2">
+                              {material.file_size && (
+                                <span className="flex items-center gap-1">
+                                  <span>📦</span>
+                                  {material.file_size}
+                                </span>
+                              )}
+                              {material.pages && (
+                                <span className="flex items-center gap-1">
+                                  <span>📄</span>
+                                  {material.pages} páginas
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="mt-auto flex flex-col gap-1.5">
+                              <Link
+                                href={`/modules/${moduleSlug}/material/${material.id}`}
+                                className="w-full px-2 py-1.5 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded text-xs text-center"
+                              >
+                                📖 Abrir
+                              </Link>
+                              <a
+                                href={material.file_url}
+                                download
+                                className="w-full px-2 py-1.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded text-xs text-center"
+                              >
+                                ⬇️ Baixar
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+        </div>
       ) : (
+        // Visualização em Grade (original)
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {materials.map((material) => (
             <div 
@@ -137,16 +303,15 @@ export default function ModuleDetailClient({ module, materials }: Props) {
               </div>
               
               <div className="mt-auto flex flex-col gap-2">
-                <button
-                  onClick={() => handleSelectMaterial(material)}
-                  className="w-full px-3 py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition text-xs"
+                <Link
+                  href={`/modules/${moduleSlug}/material/${material.id}`}
+                  className="w-full px-3 py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition text-xs text-center"
                 >
-                  Visualizar
-                </button>
+                  📖 Abrir
+                </Link>
                 <a
                   href={material.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  download
                   className="w-full px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg transition text-xs text-center"
                 >
                   ⬇️ Baixar
@@ -154,140 +319,6 @@ export default function ModuleDetailClient({ module, materials }: Props) {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Modal de visualização */}
-      {selectedMaterial && (
-        <div 
-          className="fixed inset-0 bg-black/90 flex items-center justify-center p-2 sm:p-4 z-50 backdrop-blur-sm"
-          onClick={handleCloseMaterial}
-        >
-          <div 
-            className="bg-[#1a1a1a] border border-gray-800 rounded-lg max-w-7xl w-full max-h-[95vh] flex flex-col shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header do Modal */}
-            <div className="p-3 sm:p-4 border-b border-gray-800 flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                <span className="text-xl sm:text-2xl flex-shrink-0">{getFileIcon(selectedMaterial.type)}</span>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-white font-semibold text-sm sm:text-base truncate">{selectedMaterial.title}</h3>
-                  <p className="text-gray-400 text-xs sm:text-sm">
-                    {selectedMaterial.file_size}
-                    {selectedMaterial.pages && ` • ${selectedMaterial.pages} páginas`}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <a
-                  href={selectedMaterial.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs sm:text-sm rounded-lg transition inline-flex items-center gap-1"
-                  title="Abrir em nova aba"
-                >
-                  <span>🔗</span>
-                  <span className="hidden sm:inline">Nova Aba</span>
-                </a>
-                
-                <button
-                  onClick={handleCloseMaterial}
-                  className="text-gray-400 hover:text-white text-2xl sm:text-3xl leading-none px-2"
-                  title="Fechar"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-
-            {/* Conteúdo do Modal */}
-            <div className="flex-1 overflow-hidden relative">
-              {/* Indicador de carregamento */}
-              {isLoading && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
-                  <div className="text-white text-center">
-                    <div className="animate-spin text-4xl mb-2">⏳</div>
-                    <p>Carregando...</p>
-                  </div>
-                </div>
-              )}
-              
-              {selectedMaterial.type === 'pdf' ? (
-                // Visualizador de PDF
-                <iframe
-                  src={selectedMaterial.file_url}
-                  className="w-full h-full min-h-[60vh] sm:min-h-[70vh]"
-                  title={selectedMaterial.title}
-                  onLoad={() => setIsLoading(false)}
-                  onLoadStart={() => setIsLoading(true)}
-                />
-              ) : selectedMaterial.type === 'video' ? (
-                // Player de Vídeo
-                <div className="p-2 sm:p-6 h-full flex items-center justify-center bg-black">
-                  <video
-                    src={selectedMaterial.file_url}
-                    controls
-                    controlsList="nodownload"
-                    className="w-full h-auto max-h-full rounded-lg shadow-2xl"
-                    preload="metadata"
-                    onLoadStart={() => setIsLoading(true)}
-                    onLoadedData={() => setIsLoading(false)}
-                  >
-                    Seu navegador não suporta a reprodução de vídeos.
-                  </video>
-                </div>
-              ) : (
-                // Fallback para outros tipos
-                <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                  <div className="text-6xl mb-4">{getFileIcon(selectedMaterial.type)}</div>
-                  <h4 className="text-white text-lg font-semibold mb-2">
-                    Material Disponível para Download
-                  </h4>
-                  <p className="text-gray-400 mb-6 max-w-md">
-                    Este tipo de material não possui visualização integrada. Faça o download para acessar o conteúdo.
-                  </p>
-                  
-                  <a
-                    href={selectedMaterial.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition inline-flex items-center gap-2"
-                  >
-                    <span>⬇️</span>
-                    Baixar Material
-                  </a>
-                </div>
-              )}
-            </div>
-
-            {/* Footer do Modal */}
-            <div className="p-3 sm:p-4 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-3">
-              <p className="text-gray-400 text-xs sm:text-sm text-center sm:text-left">
-                {selectedMaterial.type === 'pdf' && '💡 Use Ctrl/Cmd + scroll para dar zoom'}
-                {selectedMaterial.type === 'video' && '💡 Use espaço para pausar/continuar'}
-              </p>
-              
-              <div className="flex gap-2 w-full sm:w-auto">
-                <button
-                  onClick={handleCloseMaterial}
-                  className="flex-1 sm:flex-none px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg transition"
-                >
-                  Fechar
-                </button>
-                
-                <a
-                  href={selectedMaterial.file_url}
-                  download
-                  className="flex-1 sm:flex-none px-4 py-2 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold text-sm rounded-lg transition inline-flex items-center justify-center gap-2"
-                >
-                  <span>⬇️</span>
-                  <span>Download</span>
-                </a>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
