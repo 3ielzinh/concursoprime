@@ -88,6 +88,7 @@ export default function UploadMaterialsPage() {
 
       let successCount = 0
       let errorCount = 0
+      const errorDetails: string[] = []
 
       for (const fileData of files) {
         try {
@@ -97,7 +98,11 @@ export default function UploadMaterialsPage() {
             .from('materials')
             .upload(fileName, fileData.file)
 
-          if (uploadError) throw uploadError
+          if (uploadError) {
+            console.error('Erro no upload do arquivo:', uploadError)
+            errorDetails.push(`${fileData.file.name}: ${uploadError.message}`)
+            throw uploadError
+          }
 
           // 2. Obter URL pública do arquivo
           const { data: { publicUrl } } = supabase.storage
@@ -122,20 +127,30 @@ export default function UploadMaterialsPage() {
               display_order: 0
             })
 
-          if (insertError) throw insertError
+          if (insertError) {
+            console.error('Erro ao inserir no banco:', insertError)
+            errorDetails.push(`${fileData.file.name}: ${insertError.message}`)
+            throw insertError
+          }
 
           successCount++
         } catch (error) {
-          console.error('Erro ao fazer upload:', error)
+          console.error('Erro completo:', error)
           errorCount++
         }
       }
 
-      setMessage(
-        `✅ Upload concluído! ${successCount} arquivo(s) enviado(s)` +
-        (errorCount > 0 ? ` | ❌ ${errorCount} erro(s)` : '')
-      )
-      setMessageType(successCount > 0 ? 'success' : 'error')
+      if (errorCount > 0 && errorDetails.length > 0) {
+        const firstErrors = errorDetails.slice(0, 3).join('\n')
+        const moreErrors = errorDetails.length > 3 ? `\n... e mais ${errorDetails.length - 3} erros` : ''
+        setMessage(
+          `${successCount > 0 ? `✅ ${successCount} arquivo(s) enviado(s)\n` : ''}❌ ${errorCount} erro(s):\n\n${firstErrors}${moreErrors}`
+        )
+        setMessageType('error')
+      } else if (successCount > 0) {
+        setMessage(`✅ Upload concluído! ${successCount} arquivo(s) enviado(s) com sucesso!`)
+        setMessageType('success')
+      }
 
       // Limpar formulário se tudo deu certo
       if (errorCount === 0) {
@@ -144,7 +159,8 @@ export default function UploadMaterialsPage() {
       }
     } catch (error) {
       console.error('Erro geral:', error)
-      setMessage('❌ Erro ao fazer upload dos arquivos')
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+      setMessage(`❌ Erro crítico: ${errorMessage}`)
       setMessageType('error')
     } finally {
       setUploading(false)
@@ -173,7 +189,7 @@ export default function UploadMaterialsPage() {
             ? 'bg-green-500/10 border border-green-500 text-green-400' 
             : 'bg-red-500/10 border border-red-500 text-red-400'
         }`}>
-          {message}
+          <pre className="whitespace-pre-wrap font-sans text-sm">{message}</pre>
         </div>
       )}
 
