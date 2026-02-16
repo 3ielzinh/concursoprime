@@ -189,7 +189,7 @@ export default function UsersManagementClient({ initialUsers }: Props) {
   }
 
   return (
-    <div>
+    <div className="max-w-[1920px] mx-auto px-6 lg:px-8 py-6">
       <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">

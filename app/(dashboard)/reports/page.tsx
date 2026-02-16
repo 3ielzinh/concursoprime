@@ -1,6 +1,6 @@
 export default function ReportsPage() {
   return (
-    <div>
+    <div className="max-w-[1920px] mx-auto px-6 lg:px-8 py-6">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">
           <span className="text-3xl sm:text-4xl">📈</span>

@@ -86,7 +86,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6 py-6">
         {/* Header com botão */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -164,11 +164,11 @@ export default async function DashboardPage() {
         </div>
 
         {/* Seção Principal - 2 colunas */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-22rem)]">
           {/* Coluna Esquerda - Progresso Geral e Sessões Recentes */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 flex flex-col">
             {/* Progresso Geral */}
-            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800 flex-shrink-0">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <span>📊</span>
@@ -218,7 +218,7 @@ export default async function DashboardPage() {
             </div>
 
             {/* Sessões Recentes */}
-            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800">
+            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800 flex-1 overflow-hidden flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <span>🕐</span>
@@ -233,7 +233,7 @@ export default async function DashboardPage() {
               </div>
 
               {!sessions || sessions.length === 0 ? (
-                <div className="flex items-center justify-center py-12">
+                <div className="flex items-center justify-center flex-1">
                   <div className="text-center">
                     <span className="text-6xl mb-4 block">📊</span>
                     <p className="text-gray-400">Nenhuma sessão registrada ainda</p>
@@ -241,7 +241,7 @@ export default async function DashboardPage() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 overflow-y-auto flex-1">
                   {sessions.map((session) => (
                     <div 
                       key={session.id}
@@ -267,8 +267,8 @@ export default async function DashboardPage() {
           </div>
 
           {/* Coluna Direita - Acesso Rápido */}
-          <div className="lg:col-span-1">
-            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800 h-full">
+          <div className="lg:col-span-1 flex flex-col">
+            <div className="bg-[#1a1a1a] rounded-lg p-6 border border-gray-800 flex-1 flex flex-col">
               <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-6">
                 <span>⚡</span>
                 Acesso Rápido

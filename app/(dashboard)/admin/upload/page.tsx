@@ -254,7 +254,7 @@ export default function UploadMaterialsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-[1920px] mx-auto px-6 lg:px-8 py-6">
       <div className="mb-6">
         <Link 
           href="/admin/users" 

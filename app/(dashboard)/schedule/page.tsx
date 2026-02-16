@@ -5,6 +5,7 @@ import { useState } from 'react'
 interface ScheduleItem {
   day: string
   hour: number
+  endHour: number // Nova propriedade para hora final
   subject: string
   color: string
 }
@@ -16,8 +17,11 @@ export default function SchedulePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedCell, setSelectedCell] = useState<{ day: string; hour: number } | null>(null)
   const [subject, setSubject] = useState('')
+  const [startHour, setStartHour] = useState(0)
+  const [endHour, setEndHour] = useState(1)
   const [color, setColor] = useState('#3B82F6')
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([])
+  const [editingItem, setEditingItem] = useState<ScheduleItem | null>(null)
 
   const colors = [
     { name: 'Azul', value: '#3B82F6' },
@@ -31,37 +35,94 @@ export default function SchedulePage() {
   ]
 
   const handleCellClick = (day: string, hour: number) => {
-    setSelectedCell({ day, hour })
+    // Verificar se já existe um item nessa célula
+    const existingItem = getScheduleItem(day, hour)
+    
+    if (existingItem) {
+      // Se existe, abrir modal para editar/excluir
+      setEditingItem(existingItem)
+      setSelectedCell({ day, hour })
+      setSubject(existingItem.subject)
+      setStartHour(existingItem.hour)
+      setEndHour(existingItem.endHour)
+      setColor(existingItem.color)
+    } else {
+      // Se não existe, criar novo
+      setEditingItem(null)
+      setSelectedCell({ day, hour })
+      setStartHour(hour)
+      setEndHour(hour + 1)
+      setSubject('')
+      setColor('#3B82F6')
+    }
     setIsModalOpen(true)
   }
 
   const handleSave = () => {
-    if (selectedCell && subject) {
-      const newItem: ScheduleItem = {
-        day: selectedCell.day,
-        hour: selectedCell.hour,
-        subject,
-        color
+    if (selectedCell && subject && startHour < endHour) {
+      if (editingItem) {
+        // Remover o item antigo
+        const filtered = scheduleItems.filter(item => 
+          !(item.day === editingItem.day && item.hour === editingItem.hour && item.endHour === editingItem.endHour)
+        )
+        
+        // Adicionar o item editado
+        const updatedItem: ScheduleItem = {
+          day: selectedCell.day,
+          hour: startHour,
+          endHour: endHour,
+          subject,
+          color
+        }
+        setScheduleItems([...filtered, updatedItem])
+      } else {
+        // Criar novo item
+        const newItem: ScheduleItem = {
+          day: selectedCell.day,
+          hour: startHour,
+          endHour: endHour,
+          subject,
+          color
+        }
+        setScheduleItems([...scheduleItems, newItem])
       }
-      setScheduleItems([...scheduleItems, newItem])
-      setIsModalOpen(false)
-      setSubject('')
-      setColor('#3B82F6')
+      
+      handleClose()
+    }
+  }
+
+  const handleDelete = () => {
+    if (editingItem) {
+      const filtered = scheduleItems.filter(item => 
+        !(item.day === editingItem.day && item.hour === editingItem.hour && item.endHour === editingItem.endHour)
+      )
+      setScheduleItems(filtered)
+      handleClose()
     }
   }
 
   const handleClose = () => {
     setIsModalOpen(false)
+    setEditingItem(null)
     setSubject('')
+    setStartHour(0)
+    setEndHour(1)
     setColor('#3B82F6')
   }
 
   const getScheduleItem = (day: string, hour: number) => {
-    return scheduleItems.find(item => item.day === day && item.hour === hour)
+    return scheduleItems.find(item => 
+      item.day === day && hour >= item.hour && hour < item.endHour
+    )
   }
 
+  // Calcular total de horas planejadas
+  const totalPlannedHours = scheduleItems.reduce((sum, item) => 
+    sum + (item.endHour - item.hour), 0
+  )
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="max-w-[1920px] mx-auto px-6 lg:px-8 py-6 h-full flex flex-col">
       <div className="mb-4 sm:mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-3">
           <span className="text-3xl sm:text-4xl">📅</span>
@@ -100,15 +161,35 @@ export default function SchedulePage() {
                     </td>
                     {days.map((day) => {
                       const item = getScheduleItem(day, hour)
+                      const isFirstHour = item && item.hour === hour
+                      const isInRange = item && hour >= item.hour && hour < item.endHour
+                      
                       return (
                         <td
                           key={`${day}-${hour}`}
                           onClick={() => handleCellClick(day, hour)}
-                          className="border border-gray-700 p-2 hover:bg-[#D4AF37]/10 cursor-pointer transition bg-black"
-                          style={item ? { backgroundColor: item.color + '20', borderLeft: `3px solid ${item.color}` } : {}}
+                          className={`border border-gray-700 p-2 hover:bg-[#D4AF37]/10 cursor-pointer transition bg-black ${
+                            isInRange ? 'border-t-0' : ''
+                          }`}
+                          style={
+                            isInRange 
+                              ? { 
+                                  backgroundColor: item.color + '20', 
+                                  borderLeft: `3px solid ${item.color}`,
+                                  borderTop: isFirstHour ? undefined : '0'
+                                } 
+                              : {}
+                          }
                         >
                           <div className="h-10 flex items-center justify-center text-xs font-medium text-white">
-                            {item?.subject}
+                            {isFirstHour && (
+                              <div className="text-center">
+                                <div className="font-semibold">{item.subject}</div>
+                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                  {String(item.hour).padStart(2, '0')}:00 - {String(item.endHour).padStart(2, '0')}:00
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </td>
                       )
@@ -121,7 +202,7 @@ export default function SchedulePage() {
 
           <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
             <p className="text-sm text-blue-400">
-              💡 <strong>Dica:</strong> Clique em um horário para adicionar uma matéria ao seu cronograma
+              💡 <strong>Dica:</strong> Clique em um horário para adicionar um bloco de estudo. Clique em horários já preenchidos para editar ou excluir.
             </p>
           </div>
         </div>
@@ -133,7 +214,7 @@ export default function SchedulePage() {
             <h3 className="text-sm font-semibold text-white">
               Horas Planejadas
             </h3>
-            <p className="text-2xl font-bold text-[#D4AF37] mt-1">{scheduleItems.length}h</p>
+            <p className="text-2xl font-bold text-[#D4AF37] mt-1">{totalPlannedHours}h</p>
             <p className="text-xs text-gray-500 mt-1">Esta semana</p>
           </div>
 
@@ -162,18 +243,67 @@ export default function SchedulePage() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-[#1a1a1a] border border-gray-800 rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <span>📝</span>
-              Adicionar ao Cronograma
+              <span>{editingItem ? '✏️' : '📝'}</span>
+              {editingItem ? 'Editar Horário' : 'Adicionar ao Cronograma'}
             </h2>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Horário Selecionado
+                  Dia da Semana
                 </label>
-                <div className="px-4 py-3 rounded-lg bg-[#0a0a0a] text-white border border-gray-700">
-                  {selectedCell?.day} - {String(selectedCell?.hour).padStart(2, '0')}:00
+                <div className="px-4 py-3 rounded-lg bg-[#0a0a0a] text-white border border-gray-700 font-medium">
+                  {selectedCell?.day}
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Hora Inicial *
+                  </label>
+                  <select
+                    value={startHour}
+                    onChange={(e) => {
+                      const newStart = parseInt(e.target.value)
+                      setStartHour(newStart)
+                      if (newStart >= endHour) {
+                        setEndHour(Math.min(newStart + 1, 23))
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-[#0a0a0a] text-white focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
+                  >
+                    {hours.map(h => (
+                      <option key={h} value={h}>
+                        {String(h).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Hora Final *
+                  </label>
+                  <select
+                    value={endHour}
+                    onChange={(e) => setEndHour(parseInt(e.target.value))}
+                    className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-[#0a0a0a] text-white focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent"
+                  >
+                    {hours.filter(h => h > startHour).map(h => (
+                      <option key={h} value={h}>
+                        {String(h).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                    <option value={24}>24:00</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-3 bg-gray-800/50 rounded-lg">
+                <p className="text-xs text-gray-400">
+                  ⏱️ Duração: <span className="text-white font-semibold">{endHour - startHour}h</span>
+                </p>
               </div>
 
               <div>
@@ -192,9 +322,9 @@ export default function SchedulePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Cor
+                  Cor do Bloco
                 </label>
-                <div className="grid grid-cols-4 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {colors.map((c) => (
                     <button
                       key={c.value}
@@ -212,6 +342,17 @@ export default function SchedulePage() {
             </div>
 
             <div className="flex gap-3 mt-6">
+              {editingItem && (
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center gap-2"
+                  title="Excluir este horário"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
               <button
                 onClick={handleClose}
                 className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg transition"
@@ -220,10 +361,10 @@ export default function SchedulePage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={!subject}
+                disabled={!subject || startHour >= endHour}
                 className="flex-1 px-4 py-3 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Salvar
+                {editingItem ? 'Atualizar' : 'Salvar'}
               </button>
             </div>
           </div>

@@ -122,7 +122,7 @@ export default function StudyPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-full px-4">
+    <div className="max-w-[1920px] mx-auto px-6 lg:px-8 py-6 flex items-center justify-center min-h-full">
       <div className="w-full max-w-2xl">
       <div className="mb-6 sm:mb-8 text-center">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center justify-center gap-3">

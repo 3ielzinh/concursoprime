@@ -52,17 +52,19 @@ export default async function ModuleDetailPage({
   // Se módulo não existe, retornar erro 404
   if (!module || moduleError) {
     return (
-      <div className="text-center py-16">
-        <span className="text-6xl mb-4 block">❌</span>
-        <h2 className="text-2xl text-white font-bold mb-2">Módulo não encontrado</h2>
-        <p className="text-gray-400 mb-6">O módulo que você está procurando não existe.</p>
-        <Link
-          href="/modules"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition"
-        >
-          <span>←</span>
-          <span>Voltar para Módulos</span>
-        </Link>
+      <div className="max-w-[1920px] mx-auto px-6 lg:px-8 py-6">
+        <div className="text-center py-16">
+          <span className="text-6xl mb-4 block">❌</span>
+          <h2 className="text-2xl text-white font-bold mb-2">Módulo não encontrado</h2>
+          <p className="text-gray-400 mb-6">O módulo que você está procurando não existe.</p>
+          <Link
+            href="/modules"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition"
+          >
+            <span>←</span>
+            <span>Voltar para Módulos</span>
+          </Link>
+        </div>
       </div>
     )
   }
