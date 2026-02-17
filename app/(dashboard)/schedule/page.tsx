@@ -1,18 +1,32 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 interface ScheduleItem {
+  id?: string
   day: string
   hour: number
-  endHour: number // Nova propriedade para hora final
+  endHour: number
   subject: string
   color: string
+}
+
+interface DatabaseSchedule {
+  id: string
+  user_id: string
+  subject_name: string
+  day_of_week: number
+  start_time: string
+  end_time: string
+  color: string
+  is_active: boolean
 }
 
 export default function SchedulePage() {
   const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
   const hours = Array.from({ length: 24 }, (_, i) => i) // 0h às 23h
+  const supabase = createClient()
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedCell, setSelectedCell] = useState<{ day: string; hour: number } | null>(null)
@@ -22,6 +36,9 @@ export default function SchedulePage() {
   const [color, setColor] = useState('#3B82F6')
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([])
   const [editingItem, setEditingItem] = useState<ScheduleItem | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [loadingSchedules, setLoadingSchedules] = useState(true)
+  const [error, setError] = useState('')
 
   const colors = [
     { name: 'Azul', value: '#3B82F6' },
@@ -33,6 +50,77 @@ export default function SchedulePage() {
     { name: 'Ciano', value: '#06B6D4' },
     { name: 'Dourado', value: '#D4AF37' },
   ]
+
+  // Carregar cronogramas ao montar o componente
+  useEffect(() => {
+    fetchSchedules()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Converter dia da semana de string para número (0 = Seg, 6 = Dom)
+  const dayToNumber = (day: string): number => {
+    return days.indexOf(day)
+  }
+
+  // Converter número para dia da semana
+  const numberToDay = (num: number): string => {
+    return days[num] || 'Seg'
+  }
+
+  // Converter hora para formato TIME (HH:MM:SS)
+  const hourToTime = (hour: number): string => {
+    return `${String(hour).padStart(2, '0')}:00:00`
+  }
+
+  // Converter TIME para hora (extrair apenas a hora)
+  const timeToHour = (time: string): number => {
+    return parseInt(time.split(':')[0])
+  }
+
+  // Buscar cronogramas do banco de dados
+  const fetchSchedules = async () => {
+    setLoadingSchedules(true)
+    setError('')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        setError('Você precisa estar logado')
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('schedules')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+
+      if (error) throw error
+      
+      // Converter dados do banco para o formato da interface
+      const items: ScheduleItem[] = (data || []).map((schedule: DatabaseSchedule) => ({
+        id: schedule.id,
+        day: numberToDay(schedule.day_of_week),
+        hour: timeToHour(schedule.start_time),
+        endHour: timeToHour(schedule.end_time),
+        subject: schedule.subject_name,
+        color: schedule.color || '#3B82F6'
+      }))
+
+      setScheduleItems(items)
+    } catch (err) {
+      console.error('Erro ao buscar cronogramas:', err)
+      const error = err as { message?: string, code?: string }
+      
+      if (error.message?.includes('schedules')) {
+        setError('⚠️ Tabela de cronogramas não configurada. Execute as migrações do banco.')
+      } else {
+        setError(error.message || 'Erro ao carregar cronogramas')
+      }
+    } finally {
+      setLoadingSchedules(false)
+    }
+  }
 
   const handleCellClick = (day: string, hour: number) => {
     // Verificar se já existe um item nessa célula
@@ -58,46 +146,124 @@ export default function SchedulePage() {
     setIsModalOpen(true)
   }
 
-  const handleSave = () => {
-    if (selectedCell && subject && startHour < endHour) {
-      if (editingItem) {
-        // Remover o item antigo
-        const filtered = scheduleItems.filter(item => 
-          !(item.day === editingItem.day && item.hour === editingItem.hour && item.endHour === editingItem.endHour)
+  const handleSave = async () => {
+    if (!selectedCell || !subject || startHour >= endHour) return
+    
+    setLoading(true)
+    setError('')
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        setError('Você precisa estar logado')
+        return
+      }
+
+      if (editingItem && editingItem.id) {
+        // Atualizar item existente
+        const { error } = await supabase
+          .from('schedules')
+          .update({
+            subject_name: subject,
+            day_of_week: dayToNumber(selectedCell.day),
+            start_time: hourToTime(startHour),
+            end_time: hourToTime(endHour),
+            color: color
+          })
+          .eq('id', editingItem.id)
+          .eq('user_id', user.id)
+
+        if (error) throw error
+
+        // Atualizar localmente
+        const updatedItems = scheduleItems.map(item => 
+          item.id === editingItem.id
+            ? {
+                ...item,
+                day: selectedCell.day,
+                hour: startHour,
+                endHour: endHour,
+                subject,
+                color
+              }
+            : item
         )
-        
-        // Adicionar o item editado
-        const updatedItem: ScheduleItem = {
-          day: selectedCell.day,
-          hour: startHour,
-          endHour: endHour,
-          subject,
-          color
-        }
-        setScheduleItems([...filtered, updatedItem])
+        setScheduleItems(updatedItems)
       } else {
         // Criar novo item
-        const newItem: ScheduleItem = {
-          day: selectedCell.day,
-          hour: startHour,
-          endHour: endHour,
-          subject,
-          color
+        const { data, error } = await supabase
+          .from('schedules')
+          .insert({
+            user_id: user.id,
+            subject_name: subject,
+            day_of_week: dayToNumber(selectedCell.day),
+            start_time: hourToTime(startHour),
+            end_time: hourToTime(endHour),
+            color: color,
+            is_active: true
+          })
+          .select()
+
+        if (error) throw error
+
+        // Adicionar localmente
+        if (data && data[0]) {
+          const newItem: ScheduleItem = {
+            id: data[0].id,
+            day: selectedCell.day,
+            hour: startHour,
+            endHour: endHour,
+            subject,
+            color
+          }
+          setScheduleItems([...scheduleItems, newItem])
         }
-        setScheduleItems([...scheduleItems, newItem])
       }
       
       handleClose()
+    } catch (err) {
+      console.error('Erro ao salvar cronograma:', err)
+      const error = err as { message?: string }
+      setError(error.message || 'Erro ao salvar cronograma')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleDelete = () => {
-    if (editingItem) {
-      const filtered = scheduleItems.filter(item => 
-        !(item.day === editingItem.day && item.hour === editingItem.hour && item.endHour === editingItem.endHour)
-      )
+  const handleDelete = async () => {
+    if (!editingItem || !editingItem.id) return
+    
+    setLoading(true)
+    setError('')
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        setError('Você precisa estar logado')
+        return
+      }
+
+      const { error } = await supabase
+        .from('schedules')
+        .delete()
+        .eq('id', editingItem.id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Remover localmente
+      const filtered = scheduleItems.filter(item => item.id !== editingItem.id)
       setScheduleItems(filtered)
+      
       handleClose()
+    } catch (err) {
+      console.error('Erro ao excluir cronograma:', err)
+      const error = err as { message?: string }
+      setError(error.message || 'Erro ao excluir cronograma')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -133,10 +299,22 @@ export default function SchedulePage() {
         </p>
       </div>
 
+      {error && (
+        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400">
+          ❌ {error}
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col gap-3 sm:gap-4 overflow-hidden">
         <div className="bg-[#1a1a1a] p-3 sm:p-6 rounded-lg border border-gray-800 flex-1 flex flex-col overflow-hidden">
-          {/* Calendário Semanal */}
-          <div className="overflow-x-auto overflow-y-auto border border-gray-700 rounded-lg flex-1">
+          {loadingSchedules ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-gray-400 text-center py-8">Carregando cronograma...</p>
+            </div>
+          ) : (
+            <>
+              {/* Calendário Semanal */}
+              <div className="overflow-x-auto overflow-y-auto border border-gray-700 rounded-lg flex-1">
             <table className="w-full border-collapse">
               <thead className="sticky top-0 z-10">
                 <tr>
@@ -205,6 +383,8 @@ export default function SchedulePage() {
               💡 <strong>Dica:</strong> Clique em um horário para adicionar um bloco de estudo. Clique em horários já preenchidos para editar ou excluir.
             </p>
           </div>
+            </>
+          )}
         </div>
 
         {/* Estatísticas rápidas */}
@@ -246,6 +426,12 @@ export default function SchedulePage() {
               <span>{editingItem ? '✏️' : '📝'}</span>
               {editingItem ? 'Editar Horário' : 'Adicionar ao Cronograma'}
             </h2>
+            
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                ❌ {error}
+              </div>
+            )}
             
             <div className="space-y-4">
               <div>
@@ -345,26 +531,29 @@ export default function SchedulePage() {
               {editingItem && (
                 <button
                   onClick={handleDelete}
-                  className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center gap-2"
+                  disabled={loading}
+                  className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition flex items-center gap-2 disabled:opacity-50"
                   title="Excluir este horário"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
+                  {loading ? 'Excluindo...' : ''}
                 </button>
               )}
               <button
                 onClick={handleClose}
-                className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg transition"
+                disabled={loading}
+                className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg transition disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSave}
-                disabled={!subject || startHour >= endHour}
+                disabled={!subject || startHour >= endHour || loading}
                 className="flex-1 px-4 py-3 bg-[#D4AF37] hover:bg-[#FFD700] text-black font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingItem ? 'Atualizar' : 'Salvar'}
+                {loading ? 'Salvando...' : editingItem ? 'Atualizar' : 'Salvar'}
               </button>
             </div>
           </div>
