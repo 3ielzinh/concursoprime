@@ -5,13 +5,21 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
 URL = "https://www.simulado.profdaviconcursos.com.br/"
 
-driver = webdriver.Chrome(ChromeDriverManager().install())
-driver.get(URL)
+# Configuração do Chrome
+options = Options()
+options.add_argument("--start-maximized")
+# options.add_argument("--headless")  # descomente se quiser rodar invisível
 
+service = Service(ChromeDriverManager().install())
+driver = webdriver.Chrome(service=service, options=options)
+
+driver.get(URL)
 wait = WebDriverWait(driver, 10)
 
 def get_questions():
@@ -40,12 +48,12 @@ def select_subject(index):
     time.sleep(2)
 
 def hash_text(text):
-    return hashlib.md5(text.encode()).hexdigest()
+    return hashlib.md5(text.encode("utf-8")).hexdigest()
 
 arquivo_saida = open("questoes.txt", "w", encoding="utf-8")
 questoes_unicas = set()
 
-# total de opções no select
+# Captura o select
 select_element = wait.until(
     EC.presence_of_element_located((By.XPATH, '//*[@id="outro"]'))
 )
@@ -57,17 +65,25 @@ for i in range(total_opcoes):
     select_subject(i)
 
     while True:
-        texto = get_questions()
+        try:
+            texto = get_questions()
+        except:
+            break
+
         h = hash_text(texto)
 
         if h not in questoes_unicas:
             questoes_unicas.add(h)
             arquivo_saida.write(texto + "\n\n" + "="*80 + "\n\n")
+            print("Questão salva.")
         else:
             print("Questão repetida detectada.")
 
         if not click_next():
+            print("Fim das questões deste assunto.")
             break
 
 arquivo_saida.close()
 driver.quit()
+
+print("Raspagem finalizada.")
